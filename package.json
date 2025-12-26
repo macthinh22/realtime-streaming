@@ -1,0 +1,13 @@
+{
+  "name": "realtime-streaming",
+  "version": "1.0.0",
+  "description": "High-quality real-time screen streaming with WebRTC",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node server/server.js"
+  },
+  "dependencies": {
+    "ws": "^8.14.2"
+  }
+}

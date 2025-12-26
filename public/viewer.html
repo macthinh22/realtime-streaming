@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watching - StreamHQ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        /* Viewer-specific overrides for fullscreen experience */
+        .viewer-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+        }
+
+        .viewer-video-container {
+            width: 100%;
+            max-width: min(90vw, 1400px);
+            aspect-ratio: 16 / 9;
+        }
+
+        .waiting-message {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .waiting-icon {
+            font-size: 4rem;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+    <div class="noise-overlay"></div>
+
+    <div class="container">
+        <header class="header">
+            <a href="/" class="logo">👁️ StreamHQ</a>
+            <div id="connection-status" class="status status-disconnected">
+                <span class="status-dot"></span>
+                <span id="status-text">Connecting...</span>
+            </div>
+        </header>
+
+        <main class="viewer-main">
+            <div id="video-wrapper" class="video-container viewer-video-container">
+                <video id="stream-video" autoplay playsinline></video>
+                <div id="placeholder" class="video-placeholder">
+                    <div class="waiting-message">
+                        <div class="waiting-icon">📺</div>
+                        <div class="spinner"></div>
+                        <p id="placeholder-text">Waiting for broadcaster...</p>
+                    </div>
+                </div>
+                <button id="fullscreen-btn" class="fullscreen-btn" title="Toggle fullscreen">⛶</button>
+            </div>
+
+            <p style="color: var(--text-secondary); font-size: 0.9rem; text-align: center;">
+                The stream will appear automatically when broadcasting starts
+            </p>
+        </main>
+    </div>
+
+    <script src="/js/signaling.js"></script>
+    <script src="/js/viewer.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Broadcasting - StreamHQ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+    <div class="noise-overlay"></div>
+
+    <div class="container">
+        <header class="header">
+            <a href="/" class="logo">📡 StreamHQ</a>
+            <div id="connection-status" class="status status-disconnected">
+                <span class="status-dot"></span>
+                <span id="status-text">Connecting...</span>
+            </div>
+        </header>
+
+        <main style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1.5rem;">
+            <div class="video-container">
+                <video id="preview" autoplay muted playsinline></video>
+                <div id="placeholder" class="video-placeholder">
+                    <div class="video-placeholder-icon">🖥️</div>
+                    <p>Click "Start Sharing" to begin broadcasting</p>
+                </div>
+                <button id="fullscreen-btn" class="fullscreen-btn" title="Toggle fullscreen">⛶</button>
+            </div>
+
+            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; justify-content: center;">
+                <button id="start-btn" class="btn btn-primary btn-lg">
+                    <span>🎬</span> Start Sharing
+                </button>
+                <button id="stop-btn" class="btn btn-danger btn-lg" style="display: none;">
+                    <span>⏹️</span> Stop Sharing
+                </button>
+
+                <div id="viewer-count" class="viewer-count" style="display: none;">
+                    <span class="viewer-count-icon">👁️</span>
+                    <span id="viewer-count-text">0 viewers</span>
+                </div>
+            </div>
+
+            <div class="card" style="max-width: 600px; margin-top: 1rem;">
+                <h3 style="margin-bottom: 0.75rem; font-size: 1rem;">💡 Tips for best quality</h3>
+                <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 1.25rem;">
+                    <li>Select "Entire Screen" for best performance</li>
+                    <li><strong>Check "Share audio"</strong> in the browser dialog to include system sound</li>
+                    <li>Close unnecessary applications to reduce CPU usage</li>
+                </ul>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/signaling.js"></script>
+    <script src="/js/broadcaster.js"></script>
+</body>
+
+</html>
