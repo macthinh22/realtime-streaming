@@ -43,6 +43,7 @@
     let peerConnection = null;
     let retryCount = 0;
     const MAX_RETRIES = 3;
+    let isInitialConnection = true; // Track if this is the first connection
     let participantCountValue = 1;
 
     // WebRTC configuration
@@ -77,24 +78,28 @@
             video.style.display = 'none'; // Hide video until stream arrives
         }
 
-        // Connect to signaling server and rejoin room
+        // Set up signaling handlers BEFORE connecting
+        // This ensures we don't miss any messages
+        setupSignalingHandlers();
+
+        // Connect to signaling server and join room
         try {
             await signaling.connect();
             updateStatus('waiting', 'Joining room...');
 
-            // Rejoin the room with the new WebSocket connection
+            // Join the room with the new WebSocket connection
             signaling.send({
                 type: 'join-room',
                 roomId: roomId,
                 key: roomKey
             });
+
+            // Mark initial connection as complete
+            isInitialConnection = false;
         } catch (e) {
             updateStatus('disconnected', 'Connection failed');
             console.error('Failed to connect:', e);
         }
-
-        // Set up signaling handlers
-        setupSignalingHandlers();
 
         // Button handlers
         copyIdBtn.addEventListener('click', copyRoomId);
@@ -123,13 +128,17 @@
      */
     function setupSignalingHandlers() {
         signaling.on('connected', () => {
-            // Reconnect scenario - rejoin the room
-            updateStatus('waiting', 'Reconnecting...');
-            signaling.send({
-                type: 'join-room',
-                roomId: roomId,
-                key: roomKey
-            });
+            // Only rejoin on RECONNECT, not initial connection
+            // Initial connection is handled in init()
+            if (!isInitialConnection) {
+                console.log('Reconnecting to room...');
+                updateStatus('waiting', 'Reconnecting...');
+                signaling.send({
+                    type: 'join-room',
+                    roomId: roomId,
+                    key: roomKey
+                });
+            }
         });
 
         signaling.on('disconnected', () => {
@@ -404,6 +413,26 @@
 
         peerConnection = new RTCPeerConnection(rtcConfig);
 
+        // Track if we've shown the video (to prevent flickering)
+        let videoShown = false;
+
+        /**
+         * Show video when ready - called when we're confident the stream is playing
+         */
+        function showVideoWhenReady() {
+            if (videoShown) return;
+            if (!video.srcObject) return;
+
+            videoShown = true;
+            video.style.display = 'block';
+            placeholder.style.display = 'none';
+            updateStatus('connected', 'Streaming');
+            viewerStatusText.textContent = 'Watching stream';
+            participantCountValue = 2;
+            updateParticipantCount();
+            console.log('Video is now visible');
+        }
+
         // Handle incoming tracks
         peerConnection.ontrack = (event) => {
             console.log('Received track:', event.track.kind);
@@ -420,15 +449,27 @@
             }
 
             if (event.track.kind === 'video') {
-                video.style.display = 'block'; // Show video element
-                placeholder.style.display = 'none';
-                updateStatus('connected', 'Streaming');
-                viewerStatusText.textContent = 'Watching stream';
-                participantCountValue = 2;
-                updateParticipantCount();
+                // Listen for video metadata to know when frames are ready
+                video.onloadedmetadata = () => {
+                    console.log('Video metadata loaded');
+                    video.play().then(() => {
+                        showVideoWhenReady();
+                    }).catch(e => {
+                        console.log('Autoplay blocked:', e);
+                        // Still show video even if autoplay blocked
+                        showVideoWhenReady();
+                    });
+                };
 
-                // Ensure video plays
-                video.play().catch(e => console.log('Autoplay blocked:', e));
+                // Fallback: if video is already ready
+                if (video.readyState >= 2) {
+                    video.play().then(() => {
+                        showVideoWhenReady();
+                    }).catch(e => {
+                        console.log('Autoplay blocked:', e);
+                        showVideoWhenReady();
+                    });
+                }
             }
         };
 
@@ -442,13 +483,37 @@
             }
         };
 
-        // Handle connection state
+        // Monitor ICE connection state for faster feedback
+        peerConnection.oniceconnectionstatechange = () => {
+            console.log('ICE connection state:', peerConnection.iceConnectionState);
+
+            switch (peerConnection.iceConnectionState) {
+                case 'checking':
+                    updateStatus('waiting', 'Connecting...');
+                    break;
+                case 'connected':
+                case 'completed':
+                    // ICE is connected - stream should be flowing soon
+                    // Don't show video yet, wait for loadedmetadata
+                    retryCount = 0;
+                    break;
+                case 'disconnected':
+                    updateStatus('waiting', 'Reconnecting...');
+                    break;
+                case 'failed':
+                    updateStatus('disconnected', 'Connection failed');
+                    attemptRecovery();
+                    break;
+            }
+        };
+
+        // Handle connection state (backup for ICE state)
         peerConnection.onconnectionstatechange = () => {
             console.log('Connection state:', peerConnection.connectionState);
 
             switch (peerConnection.connectionState) {
                 case 'connected':
-                    updateStatus('connected', 'Streaming');
+                    // Connection is fully established
                     retryCount = 0;
                     break;
                 case 'disconnected':
