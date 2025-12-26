@@ -1,40 +1,107 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StreamHQ - High Quality Screen Streaming</title>
-  <meta name="description" content="Simple, high-quality peer-to-peer screen streaming with system audio">
+  <title>StreamHQ - Private Streaming Rooms</title>
+  <meta name="description" content="Create or join private streaming rooms with high-quality screen sharing">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
 </head>
+
 <body>
   <div class="bg-gradient"></div>
   <div class="noise-overlay"></div>
-  
+
   <div class="container">
-    <div class="centered">
-      <h1 class="fade-in">StreamHQ</h1>
-      <p class="subtitle fade-in fade-in-delay-1">High-quality screen streaming with system audio</p>
-      
-      <div class="card-grid fade-in fade-in-delay-2">
-        <a href="/broadcaster.html" class="card">
+    <div class="lobby-content">
+      <!-- Header -->
+      <header class="lobby-header fade-in">
+        <h1>StreamHQ</h1>
+        <p class="subtitle">Private streaming rooms with high-quality screen sharing</p>
+      </header>
+
+      <!-- Connection Status -->
+      <div id="connection-banner" class="connection-banner hidden fade-in">
+        <span id="connection-message">Connecting to server...</span>
+      </div>
+
+      <!-- Room Actions -->
+      <div class="room-actions fade-in fade-in-delay-1">
+        <!-- Create Room Card -->
+        <div class="card room-card">
           <div class="card-icon">📡</div>
-          <h2>Start Broadcasting</h2>
-          <p>Share your screen with crystal-clear quality and system audio</p>
-          <span class="btn btn-primary">Go Live</span>
-        </a>
-        
-        <a href="/viewer.html" class="card">
+          <h2>Create a Room</h2>
+          <p>Start streaming to a private room</p>
+
+          <form id="create-room-form" class="room-form">
+            <div class="form-group">
+              <label for="create-room-name">Room Name</label>
+              <input type="text" id="create-room-name" placeholder="My Watch Party" maxlength="30" required>
+            </div>
+            <div class="form-group">
+              <label for="create-room-key">Room Key</label>
+              <input type="password" id="create-room-key" placeholder="Secret password" minlength="4" required>
+              <span class="form-hint">Share this with your viewer</span>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">
+              <span>Create Room</span>
+              <span class="btn-icon">→</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Join Room Card -->
+        <div class="card room-card">
           <div class="card-icon">👁️</div>
-          <h2>Watch Stream</h2>
-          <p>Join and watch the live stream in full quality</p>
-          <span class="btn btn-secondary">Watch Now</span>
-        </a>
+          <h2>Join a Room</h2>
+          <p>Watch someone's stream</p>
+
+          <form id="join-room-form" class="room-form">
+            <div class="form-group">
+              <label for="join-room-id">Room ID</label>
+              <input type="text" id="join-room-id" placeholder="room-a1b2c3d4" pattern="room-[a-f0-9]{8}" required>
+            </div>
+            <div class="form-group">
+              <label for="join-room-key">Room Key</label>
+              <input type="password" id="join-room-key" placeholder="Secret password" required>
+            </div>
+            <button type="submit" class="btn btn-secondary btn-full">
+              <span>Join Room</span>
+              <span class="btn-icon">→</span>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Active Rooms Section -->
+      <section class="active-rooms-section fade-in fade-in-delay-2">
+        <div class="section-header">
+          <h3>Active Rooms</h3>
+          <span id="room-count" class="room-count">0/5</span>
+        </div>
+
+        <div id="rooms-container" class="rooms-container">
+          <div class="no-rooms">
+            <span class="no-rooms-icon">🏠</span>
+            <p>No active rooms yet. Create one to get started!</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Error Toast -->
+      <div id="error-toast" class="toast toast-error hidden">
+        <span class="toast-icon">⚠️</span>
+        <span id="error-message"></span>
       </div>
     </div>
   </div>
+
+  <script src="/js/signaling.js"></script>
+  <script src="/js/lobby.js"></script>
 </body>
+
 </html>

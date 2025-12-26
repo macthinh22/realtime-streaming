@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamHQ - Room</title>
+    <meta name="description" content="Private streaming room">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+    <div class="noise-overlay"></div>
+
+    <div class="container room-container">
+        <!-- Room Header -->
+        <header class="room-header">
+            <div class="room-info">
+                <h1 id="room-name">Room</h1>
+                <div class="room-meta">
+                    <span id="room-id" class="room-id-badge">room-xxxxxxxx</span>
+                    <button id="copy-id-btn" class="btn-icon-only" title="Copy Room ID">
+                        📋
+                    </button>
+                </div>
+            </div>
+            <div class="room-actions-header">
+                <div id="connection-status" class="status status-waiting">
+                    <span class="status-dot"></span>
+                    <span id="status-text">Connecting...</span>
+                </div>
+                <button id="leave-btn" class="btn btn-danger btn-sm">
+                    Leave Room
+                </button>
+            </div>
+        </header>
+
+        <!-- Video Area -->
+        <main class="video-section">
+            <div class="video-container">
+                <video id="video" autoplay playsinline></video>
+
+                <div id="placeholder" class="video-placeholder">
+                    <div class="placeholder-content">
+                        <span class="placeholder-icon" id="placeholder-icon">📡</span>
+                        <p id="placeholder-text">Click "Start Broadcasting" to share your screen</p>
+                    </div>
+                </div>
+
+                <div class="video-overlay">
+                    <button id="fullscreen-btn" class="btn-fullscreen" title="Toggle fullscreen">
+                        ⛶
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Controls -->
+        <footer class="controls-section">
+            <!-- Broadcaster Controls -->
+            <div id="broadcaster-controls" class="controls hidden">
+                <button id="start-btn" class="btn btn-primary btn-lg">
+                    <span class="btn-icon">📡</span>
+                    Start Broadcasting
+                </button>
+                <button id="stop-btn" class="btn btn-danger btn-lg hidden">
+                    <span class="btn-icon">⏹️</span>
+                    Stop Broadcasting
+                </button>
+            </div>
+
+            <!-- Viewer Controls (minimal) -->
+            <div id="viewer-controls" class="controls hidden">
+                <div class="viewer-status">
+                    <span id="viewer-status-icon">👁️</span>
+                    <span id="viewer-status-text">Watching stream</span>
+                </div>
+            </div>
+
+            <!-- Participant Info -->
+            <div class="participant-info">
+                <span id="role-badge" class="role-badge">Broadcaster</span>
+                <span id="participant-count" class="participant-count">1/2</span>
+            </div>
+        </footer>
+
+        <!-- Toast for notifications -->
+        <div id="toast" class="toast hidden">
+            <span id="toast-icon">ℹ️</span>
+            <span id="toast-message"></span>
+        </div>
+
+        <!-- Copy success notification -->
+        <div id="copy-toast" class="toast toast-success hidden">
+            <span class="toast-icon">✓</span>
+            <span>Room ID copied to clipboard!</span>
+        </div>
+    </div>
+
+    <script src="/js/signaling.js"></script>
+    <script src="/js/room.js"></script>
+</body>
+
+</html>
