@@ -9,6 +9,12 @@ class SignalingClient {
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 10;
         this.reconnectDelay = 1000;
+
+        // Heartbeat for long-running connections
+        this.heartbeatInterval = null;
+        this.heartbeatTimeout = null;
+        this.HEARTBEAT_INTERVAL = 30000; // Send ping every 30 seconds
+        this.HEARTBEAT_TIMEOUT = 10000;  // Wait 10 seconds for pong
     }
 
     /**
@@ -25,6 +31,7 @@ class SignalingClient {
                 console.log('Connected to signaling server');
                 this.isConnected = true;
                 this.reconnectAttempts = 0;
+                this.startHeartbeat();
                 this.emit('connected');
                 resolve();
             };
@@ -32,6 +39,7 @@ class SignalingClient {
             this.ws.onclose = () => {
                 console.log('Disconnected from signaling server');
                 this.isConnected = false;
+                this.stopHeartbeat();
                 this.emit('disconnected');
                 this.attemptReconnect();
             };
@@ -44,6 +52,11 @@ class SignalingClient {
             this.ws.onmessage = (event) => {
                 try {
                     const message = JSON.parse(event.data);
+                    // Handle pong responses for heartbeat
+                    if (message.type === 'pong') {
+                        this.handlePong();
+                        return;
+                    }
                     this.handleMessage(message);
                 } catch (e) {
                     console.error('Failed to parse message:', e);
@@ -51,6 +64,53 @@ class SignalingClient {
             };
         });
     }
+
+    /**
+     * Start heartbeat to keep connection alive
+     */
+    startHeartbeat() {
+        this.stopHeartbeat(); // Clear any existing
+
+        this.heartbeatInterval = setInterval(() => {
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                // Send ping
+                this.ws.send(JSON.stringify({ type: 'ping' }));
+
+                // Set timeout for pong response
+                this.heartbeatTimeout = setTimeout(() => {
+                    console.warn('Heartbeat timeout - connection may be dead');
+                    this.ws.close(); // This will trigger reconnect
+                }, this.HEARTBEAT_TIMEOUT);
+            }
+        }, this.HEARTBEAT_INTERVAL);
+
+        console.log('Heartbeat started');
+    }
+
+    /**
+     * Stop heartbeat
+     */
+    stopHeartbeat() {
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = null;
+        }
+        if (this.heartbeatTimeout) {
+            clearTimeout(this.heartbeatTimeout);
+            this.heartbeatTimeout = null;
+        }
+    }
+
+    /**
+     * Handle pong response
+     */
+    handlePong() {
+        if (this.heartbeatTimeout) {
+            clearTimeout(this.heartbeatTimeout);
+            this.heartbeatTimeout = null;
+        }
+    }
+
 
     /**
      * Handle incoming messages

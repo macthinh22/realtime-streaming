@@ -213,14 +213,48 @@
             }
         };
 
-        // Handle connection state changes
+        // Handle connection state changes with ICE restart for recovery
         pc.onconnectionstatechange = () => {
             console.log(`Connection state (${viewerId}):`, pc.connectionState);
-            if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
-                pc.close();
-                peerConnections.delete(viewerId);
+
+            switch (pc.connectionState) {
+                case 'disconnected':
+                    // Try ICE restart after a brief delay
+                    console.log(`Attempting ICE restart for ${viewerId}...`);
+                    setTimeout(async () => {
+                        if (pc.connectionState === 'disconnected') {
+                            try {
+                                await restartIce(viewerId, pc);
+                            } catch (e) {
+                                console.error('ICE restart failed:', e);
+                            }
+                        }
+                    }, 2000);
+                    break;
+
+                case 'failed':
+                    console.log(`Connection failed for ${viewerId}, cleaning up`);
+                    pc.close();
+                    peerConnections.delete(viewerId);
+                    break;
+
+                case 'closed':
+                    peerConnections.delete(viewerId);
+                    break;
             }
             updateViewerCount();
+        };
+
+        // Handle ICE connection state for additional recovery
+        pc.oniceconnectionstatechange = () => {
+            console.log(`ICE state (${viewerId}):`, pc.iceConnectionState);
+
+            if (pc.iceConnectionState === 'failed') {
+                // Attempt ICE restart
+                restartIce(viewerId, pc).catch(e => {
+                    console.error('ICE restart on failure:', e);
+                });
+            }
         };
 
         // Create and send offer
@@ -235,6 +269,31 @@
 
         updateViewerCount();
         console.log('Created peer connection for:', viewerId);
+    }
+
+    /**
+     * Restart ICE to recover from network changes
+     */
+    async function restartIce(viewerId, pc) {
+        if (pc.connectionState === 'closed') {
+            console.log('Cannot restart ICE - connection closed');
+            return;
+        }
+
+        console.log(`Restarting ICE for ${viewerId}`);
+
+        // Create new offer with ICE restart flag
+        const offer = await pc.createOffer({ iceRestart: true });
+        await pc.setLocalDescription(offer);
+
+        // Send the new offer
+        signaling.send({
+            type: 'offer',
+            viewerId: viewerId,
+            offer: pc.localDescription
+        });
+
+        console.log(`ICE restart offer sent for ${viewerId}`);
     }
 
     /**

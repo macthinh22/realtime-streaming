@@ -114,6 +114,11 @@ wss.on('connection', (ws) => {
 
 function handleMessage(ws, message) {
   switch (message.type) {
+    case 'ping':
+      // Respond to heartbeat ping
+      ws.send(JSON.stringify({ type: 'pong' }));
+      break;
+
     case 'broadcaster-ready':
       // Broadcaster announces it's ready
       broadcaster = ws;

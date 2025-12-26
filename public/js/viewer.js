@@ -12,6 +12,9 @@
 
     // State
     let peerConnection = null;
+    let retryCount = 0;
+    const MAX_RETRIES = 3;
+    let retryTimeout = null;
 
     // WebRTC configuration
     const rtcConfig = {
@@ -124,21 +127,34 @@
             }
         };
 
-        // Handle connection state
+        // Handle connection state with recovery logic
         peerConnection.onconnectionstatechange = () => {
             console.log('Connection state:', peerConnection.connectionState);
 
             switch (peerConnection.connectionState) {
                 case 'connected':
                     updateStatus('connected', 'Streaming');
+                    retryCount = 0; // Reset retry count on successful connection
+                    if (retryTimeout) {
+                        clearTimeout(retryTimeout);
+                        retryTimeout = null;
+                    }
                     break;
+
                 case 'disconnected':
+                    // Wait briefly - ICE restart from broadcaster may recover this
                     updateStatus('waiting', 'Reconnecting...');
+                    retryTimeout = setTimeout(() => {
+                        if (peerConnection && peerConnection.connectionState === 'disconnected') {
+                            console.log('Still disconnected after wait, requesting rejoin');
+                            attemptRecovery();
+                        }
+                    }, 5000);
                     break;
+
                 case 'failed':
                     updateStatus('disconnected', 'Connection failed');
-                    cleanupPeerConnection();
-                    showPlaceholder('Connection failed. Waiting for new stream...');
+                    attemptRecovery();
                     break;
             }
         };
@@ -157,10 +173,41 @@
         console.log('Sent answer');
     }
 
+
+    /**
+     * Attempt to recover from connection failure
+     */
+    function attemptRecovery() {
+        if (retryCount >= MAX_RETRIES) {
+            console.log('Max retries reached, giving up');
+            cleanupPeerConnection();
+            showPlaceholder('Connection failed. Please refresh the page.');
+            updateStatus('disconnected', 'Connection failed');
+            return;
+        }
+
+        retryCount++;
+        console.log(`Recovery attempt ${retryCount}/${MAX_RETRIES}`);
+
+        cleanupPeerConnection();
+        showPlaceholder(`Reconnecting... (attempt ${retryCount}/${MAX_RETRIES})`);
+
+        // Request to rejoin after a short delay
+        setTimeout(() => {
+            if (signaling.isConnected) {
+                signaling.send({ type: 'viewer-join' });
+            }
+        }, 1000);
+    }
+
     /**
      * Clean up peer connection
      */
     function cleanupPeerConnection() {
+        if (retryTimeout) {
+            clearTimeout(retryTimeout);
+            retryTimeout = null;
+        }
         if (peerConnection) {
             peerConnection.close();
             peerConnection = null;
