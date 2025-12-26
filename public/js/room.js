@@ -44,6 +44,8 @@
     let retryCount = 0;
     const MAX_RETRIES = 3;
     let isInitialConnection = true; // Track if this is the first connection
+    let currentViewerId = null; // Track current viewer to prevent duplicate connections
+    let isNegotiating = false; // Track if we're in the middle of WebRTC negotiation
     let participantCountValue = 1;
 
     // WebRTC configuration
@@ -178,11 +180,27 @@
         if (roomRole === 'broadcaster') {
             signaling.on('viewer-joined', async (message) => {
                 console.log('Viewer joined:', message.viewerId);
+
+                // Prevent duplicate peer connections for the same viewer
+                if (currentViewerId === message.viewerId && peerConnection &&
+                    peerConnection.connectionState !== 'failed' &&
+                    peerConnection.connectionState !== 'closed') {
+                    console.log('Already connected to this viewer, ignoring duplicate');
+                    return;
+                }
+
+                // Prevent creating new connection while negotiating
+                if (isNegotiating) {
+                    console.log('Already negotiating, ignoring viewer-joined');
+                    return;
+                }
+
                 participantCountValue = 2;
                 updateParticipantCount();
                 showToast('👁️', 'Viewer joined the room');
 
                 if (localStream) {
+                    currentViewerId = message.viewerId;
                     await createPeerConnectionAsBroadcaster(message.viewerId);
                 }
             });
@@ -193,6 +211,10 @@
                 updateParticipantCount();
                 showToast('👋', 'Viewer left the room');
 
+                // Reset state
+                currentViewerId = null;
+                isNegotiating = false;
+
                 if (peerConnection) {
                     peerConnection.close();
                     peerConnection = null;
@@ -200,15 +222,28 @@
             });
 
             signaling.on('answer', async (message) => {
-                if (peerConnection) {
-                    await peerConnection.setRemoteDescription(new RTCSessionDescription(message.answer));
-                    console.log('Set remote description');
+                try {
+                    if (peerConnection && peerConnection.signalingState === 'have-local-offer') {
+                        await peerConnection.setRemoteDescription(new RTCSessionDescription(message.answer));
+                        console.log('Set remote description successfully');
+                        isNegotiating = false;
+                    } else {
+                        console.warn('Ignoring answer - wrong signaling state:',
+                            peerConnection ? peerConnection.signalingState : 'no peer connection');
+                    }
+                } catch (e) {
+                    console.error('Error setting remote description:', e);
+                    isNegotiating = false;
                 }
             });
 
             signaling.on('ice-candidate', async (message) => {
-                if (peerConnection && message.candidate) {
-                    await peerConnection.addIceCandidate(new RTCIceCandidate(message.candidate));
+                try {
+                    if (peerConnection && peerConnection.remoteDescription && message.candidate) {
+                        await peerConnection.addIceCandidate(new RTCIceCandidate(message.candidate));
+                    }
+                } catch (e) {
+                    console.warn('Error adding ICE candidate:', e);
                 }
             });
         }
@@ -239,8 +274,12 @@
             });
 
             signaling.on('ice-candidate', async (message) => {
-                if (peerConnection && message.candidate) {
-                    await peerConnection.addIceCandidate(new RTCIceCandidate(message.candidate));
+                try {
+                    if (peerConnection && peerConnection.remoteDescription && message.candidate) {
+                        await peerConnection.addIceCandidate(new RTCIceCandidate(message.candidate));
+                    }
+                } catch (e) {
+                    console.warn('Error adding ICE candidate:', e);
                 }
             });
         }
@@ -327,6 +366,9 @@
      * Create peer connection as broadcaster
      */
     async function createPeerConnectionAsBroadcaster(viewerId) {
+        // Mark that we're starting negotiation
+        isNegotiating = true;
+
         // Close existing connection
         if (peerConnection) {
             peerConnection.close();
@@ -381,10 +423,13 @@
 
             if (peerConnection.connectionState === 'connected') {
                 updateStatus('connected', 'Streaming');
+                isNegotiating = false;
             } else if (peerConnection.connectionState === 'disconnected') {
                 updateStatus('waiting', 'Reconnecting...');
             } else if (peerConnection.connectionState === 'failed') {
                 updateStatus('disconnected', 'Connection failed');
+                isNegotiating = false;
+                currentViewerId = null; // Allow retry
             }
         };
 
