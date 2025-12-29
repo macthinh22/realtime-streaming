@@ -38,6 +38,12 @@
     const toastMessage = document.getElementById('toast-message');
     const copyToast = document.getElementById('copy-toast');
 
+    // Chat Notification DOM Elements
+    const chatNotification = document.getElementById('chat-notification');
+    const chatNotificationSender = document.getElementById('chat-notification-sender');
+    const chatNotificationText = document.getElementById('chat-notification-text');
+    const chatNotificationClose = document.getElementById('chat-notification-close');
+
     // Chat DOM Elements
     const chatToggleBtn = document.getElementById('chat-toggle-btn');
     const chatPanel = document.getElementById('chat-panel');
@@ -56,6 +62,7 @@
     let isNegotiating = false; // Track if we're in the middle of WebRTC negotiation
     let participantCountValue = 1;
     let isChatOpen = localStorage.getItem('chatOpen') === 'true';
+    let notificationTimeout = null;
 
     // WebRTC configuration
     const rtcConfig = {
@@ -138,6 +145,9 @@
             chatPanel.classList.remove('hidden');
         }
 
+        // Chat notification close handler
+        chatNotificationClose.addEventListener('click', dismissChatNotification);
+
         // Handle page unload
         window.addEventListener('beforeunload', () => {
             signaling.send({ type: 'leave-room' });
@@ -198,6 +208,11 @@
         // Chat message handler (for both roles)
         signaling.on('chat-broadcast', (message) => {
             displayChatMessage(message);
+
+            // Show notification if chat is closed and message is from someone else
+            if (!isChatOpen && message.sender !== roomRole) {
+                showChatNotification(message.sender, message.message);
+            }
         });
 
         // Broadcaster-specific handlers
@@ -765,6 +780,7 @@
         if (isChatOpen) {
             chatInput.focus();
             scrollChatToBottom();
+            dismissChatNotification(); // Dismiss notification when chat opens
         }
     }
 
@@ -826,6 +842,42 @@
      */
     function scrollChatToBottom() {
         chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    /**
+     * Show chat notification popup for new message
+     */
+    function showChatNotification(sender, message) {
+        if (notificationTimeout) {
+            clearTimeout(notificationTimeout);
+        }
+
+        const senderLabel = sender === 'broadcaster' ? '📡 Broadcaster' : '👁️ Viewer';
+        chatNotificationSender.textContent = senderLabel;
+
+        const truncatedMessage = message.length > 100
+            ? message.substring(0, 100) + '...'
+            : message;
+        chatNotificationText.textContent = truncatedMessage;
+
+        chatNotification.classList.remove('hidden');
+        chatNotification.classList.add('visible');
+
+        notificationTimeout = setTimeout(() => {
+            dismissChatNotification();
+        }, 4000);
+    }
+
+    /**
+     * Dismiss chat notification
+     */
+    function dismissChatNotification() {
+        chatNotification.classList.remove('visible');
+        chatNotification.classList.add('hidden');
+        if (notificationTimeout) {
+            clearTimeout(notificationTimeout);
+            notificationTimeout = null;
+        }
     }
 
     /**

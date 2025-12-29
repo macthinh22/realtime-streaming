@@ -103,7 +103,17 @@
             <span>Room ID copied to clipboard!</span>
         </div>
 
-
+        <!-- Chat notification popup -->
+        <div id="chat-notification" class="chat-notification hidden">
+            <div class="chat-notification-header">
+                <span class="chat-notification-title">💬 New Message</span>
+                <button id="chat-notification-close" class="chat-notification-close">✕</button>
+            </div>
+            <div class="chat-notification-body">
+                <span id="chat-notification-sender" class="chat-notification-sender"></span>
+                <p id="chat-notification-text" class="chat-notification-text"></p>
+            </div>
+        </div>
 
         <!-- Chat Panel -->
         <div id="chat-panel" class="chat-panel hidden">
