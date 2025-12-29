@@ -52,7 +52,10 @@
                 </div>
 
                 <div class="video-overlay">
-                    <button id="fullscreen-btn" class="btn-fullscreen" title="Toggle fullscreen">
+                    <button id="chat-toggle-btn" class="btn-video-overlay" title="Toggle Chat">
+                        💬
+                    </button>
+                    <button id="fullscreen-btn" class="btn-video-overlay" title="Toggle fullscreen">
                         ⛶
                     </button>
                 </div>
@@ -98,6 +101,27 @@
         <div id="copy-toast" class="toast toast-success hidden">
             <span class="toast-icon">✓</span>
             <span>Room ID copied to clipboard!</span>
+        </div>
+
+
+
+        <!-- Chat Panel -->
+        <div id="chat-panel" class="chat-panel hidden">
+            <div class="chat-header">
+                <span class="chat-title">💬 Chat</span>
+                <button id="chat-close-btn" class="chat-close-btn" title="Close Chat">✕</button>
+            </div>
+            <div id="chat-messages" class="chat-messages">
+                <div class="chat-empty-state">
+                    <span class="chat-empty-icon">💬</span>
+                    <p>No messages yet. Start the conversation!</p>
+                </div>
+            </div>
+            <form id="chat-form" class="chat-input-area">
+                <input type="text" id="chat-input" class="chat-input" placeholder="Type a message..." maxlength="500"
+                    autocomplete="off">
+                <button type="submit" class="chat-send-btn" title="Send">➤</button>
+            </form>
         </div>
     </div>
 

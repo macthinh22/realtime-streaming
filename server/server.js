@@ -478,6 +478,39 @@ function handleMessage(ws, message) {
       break;
     }
 
+    // ============================================
+    // Chat Messages
+    // ============================================
+    case 'chat-message': {
+      const roomId = clientRooms.get(ws);
+      if (!roomId) break;
+
+      const room = rooms.get(roomId);
+      if (!room) break;
+
+      // Validate message
+      if (!message.message || typeof message.message !== 'string') break;
+
+      const senderRole = room.broadcaster === ws ? 'broadcaster' : 'viewer';
+      const broadcast = JSON.stringify({
+        type: 'chat-broadcast',
+        sender: senderRole,
+        message: message.message.slice(0, 500), // Max 500 chars
+        timestamp: Date.now()
+      });
+
+      // Broadcast to all room participants
+      if (room.broadcaster && room.broadcaster.readyState === 1) {
+        room.broadcaster.send(broadcast);
+      }
+      if (room.viewer && room.viewer.readyState === 1) {
+        room.viewer.send(broadcast);
+      }
+
+      console.log(`Chat message in room ${roomId} from ${senderRole}`);
+      break;
+    }
+
     default:
       console.log('Unknown message type:', message.type);
   }

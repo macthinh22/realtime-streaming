@@ -38,6 +38,14 @@
     const toastMessage = document.getElementById('toast-message');
     const copyToast = document.getElementById('copy-toast');
 
+    // Chat DOM Elements
+    const chatToggleBtn = document.getElementById('chat-toggle-btn');
+    const chatPanel = document.getElementById('chat-panel');
+    const chatCloseBtn = document.getElementById('chat-close-btn');
+    const chatMessages = document.getElementById('chat-messages');
+    const chatForm = document.getElementById('chat-form');
+    const chatInput = document.getElementById('chat-input');
+
     // State
     let localStream = null;
     let peerConnection = null;
@@ -47,6 +55,7 @@
     let currentViewerId = null; // Track current viewer to prevent duplicate connections
     let isNegotiating = false; // Track if we're in the middle of WebRTC negotiation
     let participantCountValue = 1;
+    let isChatOpen = localStorage.getItem('chatOpen') === 'true';
 
     // WebRTC configuration
     const rtcConfig = {
@@ -119,6 +128,16 @@
             stopBtn.addEventListener('click', stopBroadcasting);
         }
 
+        // Chat toggle handlers
+        chatToggleBtn.addEventListener('click', toggleChat);
+        chatCloseBtn.addEventListener('click', closeChat);
+        chatForm.addEventListener('submit', sendChatMessage);
+
+        // Restore chat panel state
+        if (isChatOpen) {
+            chatPanel.classList.remove('hidden');
+        }
+
         // Handle page unload
         window.addEventListener('beforeunload', () => {
             signaling.send({ type: 'leave-room' });
@@ -174,6 +193,11 @@
 
         signaling.on('room-left', () => {
             window.location.href = '/';
+        });
+
+        // Chat message handler (for both roles)
+        signaling.on('chat-broadcast', (message) => {
+            displayChatMessage(message);
         });
 
         // Broadcaster-specific handlers
@@ -725,6 +749,100 @@
         toast.classList.remove('hidden');
 
         setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    // ============================================
+    // Chat Functions
+    // ============================================
+
+    /**
+     * Toggle chat panel visibility
+     */
+    function toggleChat() {
+        isChatOpen = !isChatOpen;
+        chatPanel.classList.toggle('hidden', !isChatOpen);
+        localStorage.setItem('chatOpen', isChatOpen);
+        if (isChatOpen) {
+            chatInput.focus();
+            scrollChatToBottom();
+        }
+    }
+
+    /**
+     * Close chat panel
+     */
+    function closeChat() {
+        isChatOpen = false;
+        chatPanel.classList.add('hidden');
+        localStorage.setItem('chatOpen', 'false');
+    }
+
+    /**
+     * Send chat message
+     */
+    function sendChatMessage(e) {
+        e.preventDefault();
+        const message = chatInput.value.trim();
+        if (!message) return;
+
+        signaling.send({
+            type: 'chat-message',
+            message: message
+        });
+
+        chatInput.value = '';
+        chatInput.focus();
+    }
+
+    /**
+     * Display chat message
+     */
+    function displayChatMessage(data) {
+        // Remove empty state if present
+        const emptyState = chatMessages.querySelector('.chat-empty-state');
+        if (emptyState) {
+            emptyState.remove();
+        }
+
+        const isSelf = data.sender === roomRole;
+        const messageEl = document.createElement('div');
+        messageEl.className = `chat-message ${isSelf ? 'message-self' : 'message-other'}`;
+
+        const senderLabel = isSelf ? 'You' : (data.sender === 'broadcaster' ? '📡 Broadcaster' : '👁️ Viewer');
+        const timeStr = formatTime(data.timestamp);
+
+        messageEl.innerHTML = `
+            <div class="chat-message-sender">${senderLabel}</div>
+            <div class="chat-message-text">${escapeHtml(data.message)}</div>
+            <div class="chat-message-time">${timeStr}</div>
+        `;
+
+        chatMessages.appendChild(messageEl);
+        scrollChatToBottom();
+    }
+
+    /**
+     * Scroll chat to bottom
+     */
+    function scrollChatToBottom() {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    /**
+     * Format timestamp to time string
+     */
+    function formatTime(timestamp) {
+        const date = new Date(timestamp);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    /**
+     * Escape HTML to prevent XSS
+     */
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     // Initialize
