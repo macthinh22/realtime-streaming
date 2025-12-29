@@ -352,8 +352,9 @@
                 systemAudio: 'include'
             });
 
-            // Show preview
+            // Show preview (muted to prevent audio echo on broadcaster side)
             video.srcObject = localStream;
+            video.muted = true;
             placeholder.style.display = 'none';
 
             // Update UI
